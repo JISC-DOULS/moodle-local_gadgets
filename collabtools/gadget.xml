@@ -1,0 +1,206 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Module>
+    <ModulePrefs
+            title="OU collaborative activity status"
+            author="The Open University"
+            author_email="igoogle+nospam@my.open.ac.uk"
+            thumbnail="%%moodleurl%%/local/gadgets/collabtools/thumbnail.png" scrolling="true" height="350">
+        <Require feature="views" />
+        <Require feature="dynamic-height" />
+        <Require feature="tabs" />
+        <Require feature="osapi" />
+        <Require feature="setprefs" />
+    </ModulePrefs>
+    <UserPref name="selectedTab" datatype="hidden" default_value="0" />
+    <Content type="html" view="home,canvas,profile"><![CDATA[<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+    %%js%%
+
+    <style type="text/css">
+        body {
+            background-image: none;
+            background-color: #FFF;
+            padding: 0;
+            min-width: 0;
+            font: 0.875em/1.4 Arial, sans-serif; /* base: 14px */
+            color: #1A1A1A;
+        }
+
+        /*Gadget css */
+        .spinner {
+            text-align: center;
+            margin-top: 50%;
+        }
+        .clearer {
+            clear: both;
+            height: .5em;
+        }
+        #instructs {
+            display: none;
+            margin-top: 2em;
+            font-size: .75em;
+            width:auto;
+            background-color:#f2f2f2;
+            -moz-border-radius:5px;
+            -webkit-border-radius:5px;
+            border-radius:5px;
+            -khtml-border-radius:5px;
+            padding: .5em;
+            padding-left: 1em;
+        }
+        .coursecont {
+            margin-bottom: .5em;
+            width:auto;
+            background-color:#f2f2f2;
+            -moz-border-radius:5px;
+            -webkit-border-radius:5px;
+            border-radius:5px;
+            -khtml-border-radius:5px;
+            position:relative;
+            min-height: 2em;
+        }
+        .coursecont .coursename {
+            background-color:#CCC;
+            -moz-border-radius:5px;
+            -webkit-border-radius:5px;
+            border-radius:5px;
+            -khtml-border-radius:5px;
+            width: auto;
+            padding-left: 1em;
+            padding-right: 1em;
+            padding-top: .5em;
+            padding-bottom: .5em;
+            font-weight: bold;
+        }
+        a:link, a:visited, a:hover {
+            color: #000;
+            text-decoration: none;
+        }
+        a:hover {
+            text-decoration: underline;
+        }
+        .activity {
+            padding-left: 1em;
+            padding-right: 1em;
+            padding-top: .5em;
+            padding-bottom: .5em;
+        }
+        .activity .actname {
+            margin-right: .5em;
+            display: inline;
+        }
+        .activity .actname img {
+            margin-right: .5em;
+        }
+        .activity .update {
+            width: 16px;
+            height: 16px;
+            background: url(%%moodleurl%%/local/gadgets/collabtools/unread.png);
+            display: inline-block;
+        }
+    </style>
+
+    <script type="text/javascript">
+    var prefs = new gadgets.Prefs();
+    var tabs = new Array();
+    var retg;
+    function wsresponse(ret) {
+        YUI().use('node', function(Y) {
+        Y.one('#layout .spinner').setStyle('display', 'none');
+            if (typeof ret.content == 'object') {
+                try {
+                    var obsize = Y.Object.size(ret.content);
+    
+                    if (obsize == 0) {
+                        Y.one('#layout').append('<p>There are no modules available to display.</p>');
+                        return;
+                    }
+    
+                    for (var i = 0; i < obsize; i++) {
+                        //Make containers for each course
+                        var toadd = '<div class="coursecont">';
+                        toadd += '<div class="coursename">';
+                        toadd += '<a href="' + ret.content[i].url + '" class="newwin">';
+                        toadd += ret.content[i].shortname + '</a></div>';
+                        //Get activities for this course
+                        var numacts = Y.Object.size(ret.content[i].activities);
+                        for (var j = 0; j < numacts; j++) {
+                            toadd += '<div class="activity">';
+                            toadd += '<div class="actname">';
+                            toadd += '<img src="' + ret.content[i].activities[j].iconurl + '">';
+                            toadd += '<a href="' + ret.content[i].activities[j].url +'" class="newwin">';
+                            toadd += ret.content[i].activities[j].name;
+                            toadd += '</a></div>';
+                            if (ret.content[i].activities[j].updates == true) {
+                                toadd += '<div class="update" title="Activity has unread content"></div>';
+                            }
+                            toadd += '</div>';
+                        }
+                        toadd += "</div>";
+                        Y.one('#layout').append(toadd);
+                    }
+                    Y.one('#instructs').setStyle('display', 'block');
+                    //Make links in new window
+                    var links = Y.all('.newwin');
+                    links.set('target', '_blank');
+                    resize_gadget();
+                }
+                catch(e) {
+                    error('There was an error adding information to the gadget. ' + e);
+                }
+            } else {
+                error('Unexpected data format from Module website');
+            }
+        });
+    };
+
+    function resize_gadget() {
+        if (gadgets.views.getCurrentView().getName().toLowerCase() == 'canvas') {
+            // Tells gadget to resize itself
+            gadgets.window.adjustHeight();
+            return;
+        }
+        YUI().use("node", function(Y) {
+            //Check for Mobile (tricky with android as may be tablet)
+            if (Y.UA.iphone > 0 || Y.UA.ipod > 0 || (Y.UA.android > 1 && Y.UA.android < 3)) {
+                gadgets.window.adjustHeight();
+            }
+        });
+    }
+
+    //Main Start function - once user map is set then do content!
+    function start() {
+        YUI().use('async-queue', 'node', function(Y) {
+            var q = new Y.AsyncQueue(function() {
+                if (typeof mg.usermap != 'undefined') {
+                    if (mg.usermap) {
+                        Y.one('#layout').prepend(
+                        '<div class="spinner"><img src="%%moodleurl%%/local/gadgets/collabtools/ajax-loader.gif"/></div>'
+                        );
+                        mg.web_service_call('local_gadgets_get_collabtoolsupdate', 'userid=*&courseid=0', wsresponse, false);
+                        q.stop();
+                    }
+                }
+            });
+            //allow time for response from Moodle
+            q.defaults.iterations = 20;
+            q.defaults.timeout = 250;
+            q.run();
+        });
+    };
+
+    var mg = new moodle_gadget("%%moodleurl%%");
+
+    //Check user mapping between gadget and moodle
+    gadgets.util.registerOnLoadHandler(function(){mg.user_map_exists()});
+    gadgets.util.registerOnLoadHandler(start);
+  </script>
+
+<div id="usermap"> </div>
+<div id="linktoauthorise"> </div>
+<div id="layout" role="main"> 
+</div>
+<div id="instructs">
+Includes information you haven't read. <img src="%%moodleurl%%/local/gadgets/collabtools/unread.png" alt="Unread icon" title="Unread icon"/>
+</div>
+<div class="clearer" />]]></Content>
+</Module>

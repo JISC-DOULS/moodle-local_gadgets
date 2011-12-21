@@ -1,0 +1,457 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<Module>
+    <ModulePrefs title="OU study planner" author="The Open University"
+        scrolling="true" height="350" thumbnail="%%moodleurl%%/local/gadgets/studyplan/thumbnail.png"
+        author_email="igoogle+nospam@my.open.ac.uk">
+        <Require feature="views" />
+        <Require feature="osapi" />
+        <Require feature="dynamic-height" />
+        <Require feature="tabs" />
+        <Require feature="setprefs" />
+    </ModulePrefs>
+    <UserPref name="selectedTab" datatype="hidden" default_value="0"/>
+    <Content type="html" view="home,canvas,profile"><![CDATA[
+    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+    %%js%%
+    <link rel="stylesheet" href="%%moodleurl%%/theme/styles.php?theme=ou&amp;type=ie" type="text/css"/>
+
+    <style type="text/css">
+        html {
+            padding: 0;
+            background-image: none;
+            background-color: #FFF;
+        }
+        body {
+            background-image: none;
+            background-color: #FFF;
+            padding: 0;
+            min-width: 0;
+        }
+        /* Override studplanner css to suit gadget*/
+        .studyplan-format .studyplanweeknumber {
+            padding: 0;
+            padding-left: 0px;
+        }
+        .studyplan-format .current .studyplanweeknumber {
+            padding: 0;
+            padding-left: 10px;
+        }
+        .studyplan-format .activity {
+            list-style-type: none;
+        }
+        .studyplan-format .studyplanweeknumber {
+            width: 50px;
+        }
+        .studyplan-format .studyplancontent {
+            margin-left: 45px;
+        }
+        .studyplan-format .studyplan-personal-event-date {
+            width: 50px;
+        }
+        .studyplan-format .studyplansection.current {
+            padding-bottom: .5em;
+        }
+        .studyplan-addnote {
+            display: none;
+        }
+        /*Gadget css */
+        .spinner {
+            text-align: center;
+            margin-top: 50%;
+        }
+        #studyplanlayout .studyplanner-header-coursename {
+            margin-right: 0;
+            min-height: 2em;
+            padding-top: .5em;
+            padding-left: .5em;
+        }
+        .weekselect fieldset {
+            margin-left: 1em;
+        }
+        .weekselect legend{
+            margin-left: -1em;
+        }
+        .weekselect label {
+            margin-right: .5em;
+        }
+        /*Tab styling*/
+        .yui3-skin-sam #studyplanlayout .yui3-tabview-panel {
+            background: 0;
+        }
+        .yui3-tab-focused {
+            outline: yellow 1px solid;
+        }
+        .yui3-skin-sam #studyplanlayout .yui3-tabview-list {
+            border-color: #CCC;
+            border-width: 0 0 2px;
+        }
+        .yui3-skin-sam #studyplanlayout .yui3-tab-selected .yui3-tab-label {
+            border-color: #CCC;
+        }
+        .yui3-skin-sam #studyplanlayout .yui3-tab-label {
+            background: #F2F2F2;
+            color: #1F5B6B;
+            border-color: white;
+        }
+        .yui3-skin-sam .yui3-tab-label {
+            -moz-border-radius-topleft: 4px;
+            -moz-border-radius-topright: 4px;
+            -webkit-border-top-left-radius: 4px;
+            -webkit-border-top-right-radius: 4px;
+        }
+        .yui3-skin-sam #studyplanlayout .yui3-tab-selected .yui3-tab-label, .yui3-skin-sam .yui3-tab-selected .yui3-tab-label:focus, .yui3-skin-sam .yui3-tab-selected .yui3-tab-label:hover {
+            background: white;
+            color: #1F5B6B;
+            font-weight: bold;
+        }
+    </style>
+
+    <script type="text/javascript">
+    var prefs = new gadgets.Prefs();
+    var tabs = new Array();
+    var retg;
+    function wsresponse(ret) {
+        YUI().use('node', function(Y) {
+            if (typeof ret.content == 'object') {
+            try {
+            Y.one('#studyplanlayout').setStyle('display', 'none');
+                var obsize = Y.Object.size(ret.content);
+
+                if (obsize == 0) {
+                    Y.one('.spinner').setStyle('display', 'none');
+                    Y.one('#studyplanlayout').append('<p>There are no modules available to display.</p>');
+                    Y.one('#studyplanlayout').setStyle('display', '');
+                    return;
+                }
+
+                for (var i = 0; i < obsize; i++) {
+                    var variant = '';
+                    if (ret.content[i].variant != '') {
+                        variant = 'ou-variant-' + ret.content[i].variant;
+                    }
+                    var topdiv = '<div id="module_'+i+'" class="' + variant + '">';
+                    var planner = topdiv;
+                    planner += '<div class="studyplan-format path-course path-course-view pagelayout-course">';
+                    if (obsize == 1) {
+                        planner += '<p class="studyplanner-header-coursename">' + ret.content[i].shortname + '</p>';
+                    }
+                    planner += ret.content[i].content;
+                    planner += '<div class="modlink"><a href="' + ret.content[i].url + '" target="_blank"/>Go to module website</a></div>';
+
+                    planner += '</div></div>';
+
+                    Y.one('#studyplanlayout').append(planner);
+
+                    //Week selection (after planner is added so we have html in dom)
+                    if (ret.content[i].curweek != 0) {
+                        add_week_selection(i);
+                    };
+                    if (obsize > 1) {
+                        //Add to tab: get content from existing DOM
+                        var modcontent = topdiv;//outerhtml is not xbrowser so manually add
+                        modcontent += Y.one('#module_' + i).get('innerHTML');
+                        modcontent += '</div>';
+                        tabs[i] = {label:ret.content[i].shortname, content:modcontent};
+                    }
+                 }
+
+                 if (obsize > 1) {
+                     YUI().use('tabview', function(Y) {
+                        //Create tabs - remove existing content
+                        var tabview = new Y.TabView({
+                            children: tabs
+                        });
+                        Y.one('body').addClass('yui3-skin-sam');
+                        Y.one('#studyplanlayout').set('innerHTML','');//stop duplication
+                        tabview.render('#studyplanlayout');
+                        //Any code to alter dom of tabs content will not work from now on
+                        //Needs to be called after render event
+                        tabview.on('render', function(e) {
+                            for (var i = 0; i < obsize; i++) {
+                                //anoyingly have to re-do everything here now it's actually rendered!
+                                //re-do week select event handlers
+                                //Just use all modules anyway as if no radio won't error
+                                var radioname = 'wksel_'+ i;
+                                var curweekid = radioname + '_curweek';
+                                var surweekid = radioname + '_surweek';
+                                var allweekid = radioname + '_allweek';
+                                Y.on('click', handle_week_selection, ['#'+curweekid, '#'+surweekid, '#'+allweekid], '', i);
+                                //Need to do this here as well
+                                Y.all('form.togglecompletion').each(function(form) {
+                                    if (!form.hasClass('preventjs')) {
+                                        Y.on('submit', toggle, form);
+                                    }
+                                });
+                                //Set all links to blank target (again!)
+                                var links = Y.all('.studyplan-format a');
+                                links.set('target', '_blank');
+                                links.set('onclick', null);
+                                //Display after all rendered
+                                Y.one('#studyplanlayout').setStyle('display', 'block');
+                                resize_gadget();
+                            }
+                        });
+
+                        //Change to previously selected tab
+                        if (prefs.getInt('selectedTab') > 0) {
+                            tabview.selectChild(prefs.getInt('selectedTab'));
+                        }
+                        tabview.on('selectionChange', function(e) {
+                            setTimeout('resize_gadget()', 10);
+                            var tabselected = e.newVal.get("index");
+                            prefs.set('selectedTab', tabselected);
+                        });
+                     });
+                 }
+
+                 //Set the body tag to have the id of the studyplan
+                 Y.one('body').set('id', 'page-course-view-studyplan');
+                 //ie hack-ness
+                 if (Y.UA.ie > 0) {
+                    Y.one('body').addClass('ie');
+                    Y.one('body').addClass('ie'+Y.UA.ie);
+                 }
+                 //Set all links to blank target
+                 var links = Y.all('.studyplan-format a');
+                 links.set('target', '_blank');
+                 links.set('onclick', null);
+                 if (obsize < 2) {
+                    //Now we're done display everything to user
+                    Y.one('#studyplanlayout').setStyle('display', 'block');
+                 }
+                 resize_gadget();
+
+                 //SET COMPLETION TICKS TO USE AJAX
+                 var tick_response = function(o) {
+
+                    YUI().use('node', function(Y) {
+                        Y.all('.ajaxworking').remove();
+                        //Get form element we are dealing with
+                        var inputid = Y.one('.togglecompletion input[name="id"][value="'+o.content.cmid+'"]');
+                        var elementcont = inputid.get('form');
+                        var inputs = Y.Node.getDOMNode(elementcont).getElementsByTagName('input');
+                        for (var i=0, len=inputs.length; i<len; i++) {
+                            if (inputs[i].type == 'image') {
+                                inputs[i].src = o.content.imageurl;
+                                inputs[i].alt = o.content.alt;
+                                inputs[i].title = o.content.title;
+                            } else if (inputs[i].name == 'completionstate') {
+                                inputs[i].value = o.content.opvalue;
+                            }
+                        }
+                    });
+                };
+
+                var toggle = function(e) {
+                    e.preventDefault();
+
+                    var form = e.target;
+                    var cmid = 0;
+                    var completionstate = 0;
+                    var state = null;
+                    //Get values for call from form
+
+                    var inputs = Y.Node.getDOMNode(form).getElementsByTagName('input');
+                    for (var i=0; i<inputs.length; i++) {
+                        switch (inputs[i].name) {
+                             case 'id':
+                                 cmid = inputs[i].value;
+                                 break;
+                              case 'completionstate':
+                                 completionstate = inputs[i].value;
+                                 state = Y.one(inputs[i]);
+                                 break;
+                        }
+                    }
+
+                    // start spinning the ajax indicator
+                    /*if (gadgets.views.getCurrentView().getName().toLowerCase() == 'canvas') {
+                        var ajax = Y.Node.create('<div class="ajaxworking" />');
+                        form.append(ajax);
+                    }*/
+
+                    var postdata = 'id='+cmid+'&completionstate='+completionstate+'&fromajax=1';
+
+                    //Try and do an ajax call to set completion as this will update user session
+                    //If this fails (not signed in) do a standard web service call
+
+                    var requesty = create_cors_request('GET', '%%moodleurl%%/local/gadgets/studyplan/togglecompletion.php?'+postdata);
+                    if (requesty) {
+                        requesty.onload = function() {
+                            //Check response for success (page just contains OK text)
+                            if (requesty.responseText == 'OK') {
+                                mg.web_service_call('format_studyplan_set_completion', 'userid=*&cmid='+cmid+'&completionstate='+completionstate+'&dummy=1', tick_response, false);
+                            } else {
+                                //Request failed, probably not signed in to Moodle
+                                mg.web_service_call('format_studyplan_set_completion', 'userid=*&cmid='+cmid+'&completionstate='+completionstate, tick_response, false);
+                            }
+                        };
+                        requesty.onerror = function(e) {
+                            //Request failed, may not be logged in/authenticated
+                            //try json-p anyway in case use is logged in and browser x-domain issue
+                            YUI().use('jsonp', function (Y) {
+                                Y.jsonp('%%moodleurl%%/local/gadgets/studyplan/togglecompletion.php?'+postdata, function(){});
+                            });
+                            mg.web_service_call('format_studyplan_set_completion', 'userid=*&cmid='+cmid+'&completionstate='+completionstate, tick_response, false);
+                        };
+                        requesty.withCredentials = 'true';
+                        requesty.send(postdata);
+                    } else {
+                        //Cannot use XMLHttpRequest e.g. IE
+                        YUI().use('jsonp', function (Y) {
+                            Y.jsonp('%%moodleurl%%/local/gadgets/studyplan/togglecompletion.php?'+postdata, function(){});
+                        });
+                        mg.web_service_call('format_studyplan_set_completion', 'userid=*&cmid='+cmid+'&completionstate='+completionstate, tick_response, false);
+                    }
+                };
+
+                // register submit handlers on manual tick completion forms
+                Y.all('form.togglecompletion').each(function(form) {
+                    if (!form.hasClass('preventjs')) {
+                        Y.on('submit', toggle, form);
+                    }
+                });
+            }
+            catch(e) {
+                Y.one('.spinner').setStyle('display', 'none');
+                error('There was an error adding information to the gadget. ' + e);
+            }
+            } else {
+                Y.one('.spinner').setStyle('display', 'none');
+                error('Unexpected data format from Module website');
+            }
+        });
+    };
+
+    function create_cors_request(method, url) {
+        var xhr = null;
+        try {
+            if (window.XMLHttpRequest) {
+                xhr = new XMLHttpRequest();
+                if ("withCredentials" in xhr) {
+                    xhr.open(method, url, true);
+                } else {
+                    xhr = null;
+                }
+            } else {
+                xhr = null;
+            }
+        } catch(e) {
+            xhr = null;
+        }
+        return xhr;
+    }
+
+    function resize_gadget() {
+        if (gadgets.views.getCurrentView().getName().toLowerCase() == 'canvas') {
+            // Tells gadget to resize itself
+            gadgets.window.adjustHeight();
+            return;
+        }
+        YUI().use("node", function(Y) {
+            //Check for Mobile (tricky with android as may be tablet)
+            if (Y.UA.iphone > 0 || Y.UA.ipod > 0 || (Y.UA.android > 1 && Y.UA.android < 3)) {
+                gadgets.window.adjustHeight();
+            }
+        });
+    }
+
+    function add_week_selection(modulenum) {
+        YUI().use('node', function(Y) {
+            var curweek = Y.one('#module_' + modulenum + ' .current');
+            if (curweek) {
+                //1. show only cur week
+                show_current_week(modulenum);
+                //2. create selection ui
+                var radioname = 'wksel_'+ modulenum;
+                var curweekid = radioname + '_curweek';
+                var surweekid = radioname + '_surweek';
+                var allweekid = radioname + '_allweek';
+                var selection = '<form class="weekselect"><fieldset><legend>Select view:</legend>';
+                selection += '<input type="radio" name="'+radioname+'" value="1" checked="1" id="'+curweekid+'"/><label for="'+curweekid+'">Current</label>';
+                selection += '<input type="radio" name="'+radioname+'" value="2" id="'+surweekid+'"/><label for="'+surweekid+'">Surrounding</label>';
+                selection += '<input type="radio" name="'+radioname+'" value="3" id="'+allweekid+'"/><label for="'+allweekid+'">All</label>';
+                selection += '</fieldset></form>';
+                if (!Y.one('#' + curweekid)) {
+                    Y.one('#module_' + modulenum).prepend(selection);
+                }
+                //3. Setup events to switch week selection
+                Y.on("click", handle_week_selection, ['#'+curweekid, '#'+surweekid, '#'+allweekid], '', modulenum);
+            }
+        });
+    }
+
+    function handle_week_selection(e, modulenum) {
+        switch(e.target.get('value')) {
+            case '1': show_current_week(modulenum);
+            break;
+            case '2': show_surrounding_weeks(modulenum);
+            break;
+            case '3':
+                YUI().use('node', function(Y) {
+                    Y.all('#module_' + modulenum + ' .studyplansection').setStyle('display', '');
+                });
+            break;
+        }
+        resize_gadget();
+    }
+
+    function show_surrounding_weeks(modulenum) {
+        YUI().use('node', function(Y) {
+            var curweek = Y.one('#module_' + modulenum + ' .current');
+            if (curweek) {
+                var curweekid = curweek.get('id');
+                var curweeknum = parseInt(curweekid.substr(8));//id is section-*
+                Y.all('#module_' + modulenum + ' .studyplansection').setStyle('display', 'none');
+                curweek.setStyle('display', '');
+                Y.all('#module_' + modulenum + ' #section-'+ (curweeknum-1)).setStyle('display', '');
+                Y.all('#module_' + modulenum + ' #section-'+ (curweeknum+1)).setStyle('display', '');
+                Y.get('window').set('scrollTop', curweek.getY());
+            }
+        });
+    }
+
+    function show_current_week(modulenum) {
+        YUI().use('node', function(Y) {
+            var curweek = Y.one('#module_' + modulenum + ' .current');
+            if (curweek) {
+                Y.all('#module_' + modulenum + ' .studyplansection').setStyle('display', 'none');
+                curweek.setStyle('display', '');
+            }
+        });
+    }
+
+    //Main Start function - once user map is set then do content!
+    function start() {
+        YUI().use('async-queue', 'node', function(Y) {
+            var q = new Y.AsyncQueue(function() {
+                if (typeof mg.usermap != 'undefined') {
+                    if (mg.usermap) {
+                        Y.one('#studyplanlayout').prepend(
+                        '<div class="spinner"><img src="%%moodleurl%%/local/gadgets/studyplan/ajax-loader.gif"/></div>'
+                        );
+                        mg.web_service_call('format_studyplan_get_studyplan', 'userid=*&courseid=0', wsresponse, false);
+                        q.stop();
+                    }
+                }
+            });
+            //allow time for response from Moodle
+            q.defaults.iterations = 20;
+            q.defaults.timeout = 250;
+            q.run();
+        });
+    };
+
+    var mg = new moodle_gadget("%%moodleurl%%");
+
+    //Check user mapping between gadget and moodle
+    gadgets.util.registerOnLoadHandler(function(){mg.user_map_exists()});
+    gadgets.util.registerOnLoadHandler(start);
+  </script>
+
+<div id="usermap"> </div>
+<div id="linktoauthorise"> </div>
+<div id="studyplanlayout" role="main"> </div>
+<div class="clearer" />
+]]></Content>
+</Module>

@@ -1,17 +1,19 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Module>
-    <ModulePrefs title="OU study planner" author="The Open University"
-        scrolling="true" height="350" thumbnail="%%moodleurl%%/local/gadgets/studyplan/thumbnail.png"
-        author_email="igoogle+nospam@my.open.ac.uk">
+    <ModulePrefs
+            title="OU study planner"
+            author="The Open University"
+            author_email="igoogle+nospam@my.open.ac.uk"
+            description="Displays the study planner from your module website(s). Access activities for the current week of study."
+            thumbnail="%%moodleurl%%/local/gadgets/studyplan/thumbnail.png" scrolling="true" height="350">
         <Require feature="views" />
-        <Require feature="osapi" />
         <Require feature="dynamic-height" />
         <Require feature="tabs" />
+        <Require feature="osapi" />
         <Require feature="setprefs" />
     </ModulePrefs>
-    <UserPref name="selectedTab" datatype="hidden" default_value="0"/>
-    <Content type="html" view="home,canvas,profile"><![CDATA[
-    <!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
+    <UserPref name="selectedTab" datatype="hidden" default_value="0" />
+    <Content type="html" view="home,canvas,profile"><![CDATA[<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
     %%js%%
     <link rel="stylesheet" href="%%moodleurl%%/theme/styles.php?theme=ou&amp;type=ie" type="text/css"/>
 
@@ -26,6 +28,15 @@
             background-color: #FFF;
             padding: 0;
             min-width: 0;
+        }
+        #studyplanlayout .screenreader {
+            position: absolute !important;
+            clip: rect(1px 1px 1px 1px); /* IE6, IE7 */
+            clip: rect(1px, 1px, 1px, 1px);
+        }
+        #studyplanlayout .screenreader:focus{
+            outline: 0;
+            border: 0;
         }
         /* Override studplanner css to suit gadget*/
         .studyplan-format .studyplanweeknumber {
@@ -54,6 +65,10 @@
         .studyplan-addnote {
             display: none;
         }
+        #studyplanlayout input[type="submit"]:focus {
+            outline-color: -webkit-focus-ring-color;
+            outline-color: -moz-focusring;
+        }
         /*Gadget css */
         .spinner {
             text-align: center;
@@ -79,7 +94,9 @@
             background: 0;
         }
         .yui3-tab-focused {
-            outline: yellow 1px solid;
+            outline: black thin dotted;
+            outline-color: -webkit-focus-ring-color;
+            outline-color: -moz-focusring;
         }
         .yui3-skin-sam #studyplanlayout .yui3-tabview-list {
             border-color: #CCC;
@@ -87,6 +104,10 @@
         }
         .yui3-skin-sam #studyplanlayout .yui3-tab-selected .yui3-tab-label {
             border-color: #CCC;
+        }
+        .yui3-skin-sam #studyplanlayout .yui3-tab-selected .yui3-tab-label:after {
+            content: " current tab";
+            font-size: 0;
         }
         .yui3-skin-sam #studyplanlayout .yui3-tab-label {
             background: #F2F2F2;
@@ -175,7 +196,8 @@
                                 var curweekid = radioname + '_curweek';
                                 var surweekid = radioname + '_surweek';
                                 var allweekid = radioname + '_allweek';
-                                Y.on('click', handle_week_selection, ['#'+curweekid, '#'+surweekid, '#'+allweekid], '', i);
+                                //Y.on('click', handle_week_selection, ['#'+curweekid, '#'+surweekid, '#'+allweekid], '', i);
+                                Y.one('#module_' + i + ' form').on('submit', handle_week_selection, i);
                                 //Need to do this here as well
                                 Y.all('form.togglecompletion').each(function(form) {
                                     if (!form.hasClass('preventjs')) {
@@ -200,6 +222,19 @@
                             setTimeout('resize_gadget()', 10);
                             var tabselected = e.newVal.get("index");
                             prefs.set('selectedTab', tabselected);
+                        });
+                        //Create standard screenreader links to switch tab
+                        var tablinks = "";
+                        for (var t = 0,tlen = tabs.length; t < tlen; t++) {
+                            tablinks += '<a href="#" id="tablink_'+t+'" class="screenreader tablink">Select tab for module '+tabs[t].label+' </a>';
+                        }
+                        Y.one('#studyplanlayout').prepend(tablinks);
+                        Y.all('#studyplanlayout .tablink').on('click', function (e) {
+                            e.preventDefault();
+                            var id = e.target.get('id');
+                            var tabnum = id.substr((id.indexOf("_") + 1));
+                            tabview.selectChild(tabnum);
+                            return false;
                         });
                      });
                  }
@@ -367,22 +402,38 @@
                 var curweekid = radioname + '_curweek';
                 var surweekid = radioname + '_surweek';
                 var allweekid = radioname + '_allweek';
-                var selection = '<form class="weekselect"><fieldset><legend>Select view:</legend>';
-                selection += '<input type="radio" name="'+radioname+'" value="1" checked="1" id="'+curweekid+'"/><label for="'+curweekid+'">Current</label>';
-                selection += '<input type="radio" name="'+radioname+'" value="2" id="'+surweekid+'"/><label for="'+surweekid+'">Surrounding</label>';
-                selection += '<input type="radio" name="'+radioname+'" value="3" id="'+allweekid+'"/><label for="'+allweekid+'">All</label>';
-                selection += '</fieldset></form>';
+                var selection = '<form class="weekselect"><fieldset><legend>Select weeks to view:</legend>';
+                selection += '<input type="radio" name="'+radioname+'" value="1" checked="1" id="'+curweekid+'" title="View this week" /><label for="'+curweekid+'">Current</label>';
+                selection += '<input type="radio" name="'+radioname+'" value="2" id="'+surweekid+'" title="View this week and surrounding weeks" /><label for="'+surweekid+'">Surrounding</label>';
+                selection += '<input type="radio" name="'+radioname+'" value="3" id="'+allweekid+'" title="View all weeks" /><label for="'+allweekid+'">All</label>';
+                selection += '</fieldset>';
+                selection += '<input type="submit" class="viewsubmit" value="Change view" />';
+                selection += '</form>';
                 if (!Y.one('#' + curweekid)) {
                     Y.one('#module_' + modulenum).prepend(selection);
                 }
                 //3. Setup events to switch week selection
-                Y.on("click", handle_week_selection, ['#'+curweekid, '#'+surweekid, '#'+allweekid], '', modulenum);
+                //Y.on("click", handle_week_selection, ['#'+curweekid, '#'+surweekid, '#'+allweekid], '', modulenum);
+                Y.one('#module_' + modulenum + ' form').on('submit', handle_week_selection, modulenum);
             }
         });
     }
 
-    function handle_week_selection(e, modulenum) {
-        switch(e.target.get('value')) {
+    function handle_week_selection(e) {
+        e.preventDefault();
+        //Get module we are dealing with
+        var parentid = e.target.get('parentNode').get('id');
+        var modulenum = parentid.substr((parentid.indexOf("_") + 1));
+        //Get selected radio button
+        YUI().use('selector-css3', function(Y) {
+            var selected;
+            e.target.all('input[type=radio]').each(function(radio) {
+                if (radio.get('checked') == true) {
+                    selected = radio.get('value');
+                    return;
+                }
+            });
+            switch(selected) {
             case '1': show_current_week(modulenum);
             break;
             case '2': show_surrounding_weeks(modulenum);
@@ -392,8 +443,11 @@
                     Y.all('#module_' + modulenum + ' .studyplansection').setStyle('display', '');
                 });
             break;
-        }
-        resize_gadget();
+            }
+            resize_gadget();
+        });
+
+        return false;
     }
 
     function show_surrounding_weeks(modulenum) {
@@ -452,6 +506,5 @@
 <div id="usermap"> </div>
 <div id="linktoauthorise"> </div>
 <div id="studyplanlayout" role="main"> </div>
-<div class="clearer" />
-]]></Content>
+<div class="clearer" />]]></Content>
 </Module>

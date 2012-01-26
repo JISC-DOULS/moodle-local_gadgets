@@ -1,15 +1,14 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <Module>
     <ModulePrefs
-            title="OU collaborative activity status"
+            title="OU forum and collaborative activity status"
             author="The Open University"
             author_email="igoogle+nospam@my.open.ac.uk"
+            description="Indicates whether forums, blogs and wikis on your current modules have any unseen content."
             thumbnail="%%moodleurl%%/local/gadgets/collabtools/thumbnail.png" scrolling="true" height="350">
         <Require feature="views" />
         <Require feature="dynamic-height" />
-        <Require feature="tabs" />
         <Require feature="osapi" />
-        <Require feature="setprefs" />
     </ModulePrefs>
     <UserPref name="selectedTab" datatype="hidden" default_value="0" />
     <Content type="html" view="home,canvas,profile"><![CDATA[<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN" "http://www.w3.org/TR/html4/strict.dtd">
@@ -100,8 +99,6 @@
     </style>
 
     <script type="text/javascript">
-    var prefs = new gadgets.Prefs();
-    var tabs = new Array();
     var retg;
     function wsresponse(ret) {
         YUI().use('node', function(Y) {
@@ -109,12 +106,12 @@
             if (typeof ret.content == 'object') {
                 try {
                     var obsize = Y.Object.size(ret.content);
-    
+
                     if (obsize == 0) {
                         Y.one('#layout').append('<p>There are no modules available to display.</p>');
                         return;
                     }
-    
+
                     for (var i = 0; i < obsize; i++) {
                         //Make containers for each course
                         var toadd = '<div class="coursecont">';
@@ -197,7 +194,7 @@
 
 <div id="usermap"> </div>
 <div id="linktoauthorise"> </div>
-<div id="layout" role="main"> 
+<div id="layout" role="main">
 </div>
 <div id="instructs">
 Includes information you haven't read. <img src="%%moodleurl%%/local/gadgets/collabtools/unread.png" alt="Unread icon" title="Unread icon"/>

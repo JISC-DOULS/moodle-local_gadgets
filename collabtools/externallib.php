@@ -180,7 +180,7 @@ class local_collabtools extends external_api {
                                 $activity['updates'] = false;
                             } else {
                                 $logresult = $DB->record_exists_select('log',
-                                	'cmid = ? AND module = \'oublog\' AND time >= ? AND userid = ? AND action = \'view\'',
+                                    'cmid = ? AND module = \'oublog\' AND time >= ? AND userid = ? AND action = \'view\'',
                                     array($cm->id, $lastmodified, $userid));
                                 if ($logresult) {
                                     $activity['updates'] = false;
@@ -212,7 +212,7 @@ class local_collabtools extends external_api {
                                 $activity['updates'] = false;
                             } else {
                                 $logresult = $DB->record_exists_select('log',
-                                	'cmid = ? AND module = \'ouwiki\' AND time >= ? AND userid = ? AND action = \'view\'',
+                                    'cmid = ? AND module = \'ouwiki\' AND time >= ? AND userid = ? AND action = \'view\'',
                                     array($cm->id, $lastmodified, $userid));
                                 if ($logresult) {
                                     $activity['updates'] = false;

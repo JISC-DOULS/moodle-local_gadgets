@@ -244,7 +244,7 @@ class local_collabtools extends external_api {
                 array(
                     'shortname' => new external_value(PARAM_TEXT, 'course short name'),
                     'url' => new external_value(PARAM_TEXT, 'address'),
-                    new external_multiple_structure(
+                    'activities' => new external_multiple_structure(
                         new external_single_structure(
                             array(
                                 'name' => new external_value(PARAM_TEXT, 'activity name'),
@@ -253,7 +253,7 @@ class local_collabtools extends external_api {
                                 'iconurl' => new external_value(PARAM_TEXT, 'icon url'),
                             ), 'activity'
                         )
-                    ), 'activities'
+                    , 'activities')
                 ), 'course'
             )
         );

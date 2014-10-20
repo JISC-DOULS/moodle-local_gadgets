@@ -484,7 +484,7 @@
                         Y.one('#studyplanlayout').prepend(
                         '<div class="spinner"><img src="%%moodleurl%%/local/gadgets/studyplan/ajax-loader.gif"/></div>'
                         );
-                        mg.web_service_call('format_studyplan_get_studyplan', 'userid=*&courseid=0', wsresponse, false);
+                        mg.web_service_call('format_studyplan_get_studyplan', 'userid=*&allweeks=1&courseid=0', wsresponse, false);
                         q.stop();
                     }
                 }

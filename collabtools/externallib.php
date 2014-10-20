@@ -69,7 +69,7 @@ class local_collabtools extends external_api {
         $storeuser = $USER;//try to store 'proper' user global
         $USER = $user;//Set global user to the user we are looking at
         $enrolled = enrol_get_users_courses($userid, true, 'id, visible, shortname, format,
-            numsections, modinfo, enablecompletion, theme, startdate', 'startdate ASC');
+            numsections, enablecompletion, theme, startdate', 'startdate ASC');
 
         //An issue with enrol_get_users_courses is that if users are not unenrolled on the course
         //ending then it still gets returned - check OU course pres table if course has ended
